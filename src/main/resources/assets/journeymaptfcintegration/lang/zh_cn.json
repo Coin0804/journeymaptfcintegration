@@ -1,0 +1,23 @@
+{
+  "journeymap.overlay.tfc_rock_layers.name": "群峦岩层类型",
+  "journeymap.overlay.tfc_rock_layers.description": "在地图上显示群峦传说的地表岩层类型分布。",
+  "journeymap.overlay.tfc_precipitation.name": "群峦降水量",
+  "journeymap.overlay.tfc_precipitation.description": "以热力图形式显示群峦传说的降水量数据。",
+  "journeymap.overlay.tfc_temperature.name": "群峦温度",
+  "journeymap.overlay.tfc_temperature.description": "以热力图形式显示群峦传说的平均温度数据。",
+
+  "config.journeymap.category.overlays": "群峦覆盖层",
+  "config.journeymap.rockLayerEnabled": "岩层覆盖层",
+  "config.journeymap.rockLayerEnabled.tooltip": "在旅行地图上显示群峦传说岩层类型。",
+  "config.journeymap.precipitationEnabled": "降水覆盖层",
+  "config.journeymap.precipitationEnabled.tooltip": "在旅行地图上以热力图显示群峦降水量。",
+  "config.journeymap.temperatureEnabled": "温度覆盖层",
+  "config.journeymap.temperatureEnabled.tooltip": "在旅行地图上以热力图显示群峦温度。",
+  "config.journeymap.overlayOpacity": "覆盖层透明度",
+  "config.journeymap.overlayOpacity.tooltip": "群峦覆盖层的透明度设置。",
+  "config.journeymap.showLegend": "显示图例",
+  "config.journeymap.showLegend.tooltip": "在地图上显示当前激活覆盖层的颜色图例。",
+
+  "mod.journeymaptfcintegration.name": "旅行地图群峦集成",
+  "mod.journeymaptfcintegration.description": "为旅行地图添加群峦传说的气候与岩层覆盖层。"
+}

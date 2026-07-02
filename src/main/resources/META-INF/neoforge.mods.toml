@@ -1,0 +1,43 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+issueTrackerURL = "https://github.com/YukiMods/JourneymapTFCIntegration/issues"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+authors = "${mod_authors}"
+description = "${mod_description}"
+
+# Dependency: NeoForge
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neo_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Dependency: Minecraft
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Dependency: TerraFirmaCraft (required)
+[[dependencies.${mod_id}]]
+modId = "tfc"
+type = "required"
+versionRange = "${tfc_version_range}"
+ordering = "AFTER"
+side = "BOTH"
+
+# Dependency: JourneyMap (required — this is a JM API v2 addon)
+[[dependencies.${mod_id}]]
+modId = "journeymap"
+type = "required"
+versionRange = "[1,)"
+ordering = "AFTER"
+side = "CLIENT"

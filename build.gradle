@@ -1,0 +1,100 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.120'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+// 展开资源文件中的 ${...} 占位符 / Expand ${...} placeholders in resource files
+tasks.named('processResources', ProcessResources).configure {
+    filesMatching('**/*.toml') {
+        expand(project.properties)
+    }
+    filesMatching('**/*.mcmeta') {
+        expand(project.properties)
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        minecraftVersion = '1.21.1'
+        mappingsVersion = '2024.11.17'
+    }
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+        data {
+            data()
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+repositories {
+    // 阿里云镜像 — 国内加速
+    maven { url = 'https://maven.aliyun.com/repository/central' }
+    mavenCentral()
+
+    // JourneyMap API v2 — 独立于 mod 本体，发布在 JM 官方 Maven
+    maven {
+        name = "JourneyMap"
+        url = uri("https://jm.gserv.me/repository/maven-public/")
+    }
+
+    // TerraFirmaCraft via Modrinth Maven
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = uri("https://api.modrinth.com/maven")
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
+}
+
+dependencies {
+    // JourneyMap API v2 — compileOnly (soft dependency)
+    // 注：journeymap-api-neoforge ≠ journeymap mod，两者是独立 artifact
+    // Modrinth 的 maven.modrinth:journeymap 只含 mod 实现，不含 API v2 接口
+    compileOnly "info.journeymap:journeymap-api-neoforge:${journeymap_api_version}"
+
+    // TerraFirmaCraft — implementation (runtime dependency)
+    implementation "maven.modrinth:terrafirmacraft:${tfc_version}"
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "journeymap.overlay.tfc_rock_layers.name": "TFC Rock Layers",
+  "journeymap.overlay.tfc_rock_layers.description": "Shows surface rock types from TerraFirmaCraft.",
+  "journeymap.overlay.tfc_precipitation.name": "TFC Precipitation",
+  "journeymap.overlay.tfc_precipitation.description": "Shows rainfall amounts from TerraFirmaCraft as a heatmap.",
+  "journeymap.overlay.tfc_temperature.name": "TFC Temperature",
+  "journeymap.overlay.tfc_temperature.description": "Shows average temperatures from TerraFirmaCraft as a heatmap.",
+
+  "config.journeymap.category.overlays": "TFC Overlays",
+  "config.journeymap.rockLayerEnabled": "Rock Layer Overlay",
+  "config.journeymap.rockLayerEnabled.tooltip": "Display TFC rock layer types on JourneyMap.",
+  "config.journeymap.precipitationEnabled": "Precipitation Overlay",
+  "config.journeymap.precipitationEnabled.tooltip": "Display TFC rainfall as a heatmap on JourneyMap.",
+  "config.journeymap.temperatureEnabled": "Temperature Overlay",
+  "config.journeymap.temperatureEnabled.tooltip": "Display TFC temperature as a heatmap on JourneyMap.",
+  "config.journeymap.overlayOpacity": "Overlay Opacity",
+  "config.journeymap.overlayOpacity.tooltip": "Transparency of TFC overlay layers.",
+  "config.journeymap.showLegend": "Show Legend",
+  "config.journeymap.showLegend.tooltip": "Show color legend on the map for active overlays.",
+
+  "mod.journeymaptfcintegration.name": "JourneyMap TFC Integration",
+  "mod.journeymaptfcintegration.description": "Adds TerraFirmaCraft climate and rock layer overlays to JourneyMap."
+}
