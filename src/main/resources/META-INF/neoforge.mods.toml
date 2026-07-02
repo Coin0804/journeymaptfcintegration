@@ -1,7 +1,7 @@
 modLoader = "javafml"
 loaderVersion = "${loader_version_range}"
 license = "${mod_license}"
-issueTrackerURL = "https://github.com/YukiMods/JourneymapTFCIntegration/issues"
+issueTrackerURL = "https://github.com/Coin0804/journeymaptfcintegration/issues"
 
 [[mods]]
 modId = "${mod_id}"

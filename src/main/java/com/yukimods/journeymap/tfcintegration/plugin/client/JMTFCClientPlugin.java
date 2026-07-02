@@ -11,6 +11,7 @@ import journeymap.api.v2.client.event.FullscreenDisplayEvent;
 import journeymap.api.v2.common.JourneyMapPlugin;
 import journeymap.api.v2.common.event.ClientEventRegistry;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
@@ -32,11 +33,11 @@ public class JMTFCClientPlugin implements IClientPlugin {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JMTFCClientPlugin.class);
 
-    // ---- 叠加层定义（仅客户端使用） ----
+    // ---- 叠加层定义（仅客户端使用，name/desc 是 i18n key） ----
     private static final List<OverlayDef> OVERLAYS = List.of(
-        new OverlayDef("tfc_rock_layers",   "TFC Rock Layers",   "Toggle surface rock layer overlay",    "textures/gui/overlay_rock_layers.png"),
-        new OverlayDef("tfc_temperature",   "TFC Temperature",   "Toggle temperature heatmap overlay",   "textures/gui/overlay_temperature.png"),
-        new OverlayDef("tfc_precipitation", "TFC Precipitation", "Toggle precipitation heatmap overlay", "textures/gui/overlay_precipitation.png")
+        new OverlayDef("tfc_rock_layers",   "journeymap.overlay.tfc_rock_layers.name",   "journeymap.overlay.tfc_rock_layers.description",   "textures/gui/overlay_rock_layers.png"),
+        new OverlayDef("tfc_temperature",   "journeymap.overlay.tfc_temperature.name",   "journeymap.overlay.tfc_temperature.description",   "textures/gui/overlay_temperature.png"),
+        new OverlayDef("tfc_precipitation", "journeymap.overlay.tfc_precipitation.name", "journeymap.overlay.tfc_precipitation.description", "textures/gui/overlay_precipitation.png")
     );
 
     private static JMTFCClientPlugin instance;
@@ -73,8 +74,9 @@ public class JMTFCClientPlugin implements IClientPlugin {
         for (OverlayDef overlay : OVERLAYS) {
             ResourceLocation icon = ResourceLocation.fromNamespaceAndPath(
                 JourneymapTFCIntegration.MODID, overlay.iconPath);
+            String displayName = Component.translatable(overlay.name).getString();
 
-            overlay.button = display.addThemeToggleButton(overlay.name, icon, false, button -> {
+            overlay.button = display.addThemeToggleButton(displayName, icon, false, button -> {
                 boolean wasOn = toggledOverlays.contains(overlay.id);
                 if (wasOn) {
                     // 关闭自己
@@ -99,7 +101,7 @@ public class JMTFCClientPlugin implements IClientPlugin {
                     if (isOverworld()) sendCacheRequest();
                 }
             });
-            overlay.button.setTooltip(overlay.desc);
+            overlay.button.setTooltip(Component.translatable(overlay.desc).getString());
         }
     }
 

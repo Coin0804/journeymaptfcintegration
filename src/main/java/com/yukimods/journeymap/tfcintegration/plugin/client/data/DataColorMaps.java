@@ -1,11 +1,14 @@
 package com.yukimods.journeymap.tfcintegration.plugin.client.data;
 
+import net.minecraft.network.chat.Component;
+
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * 客户端颜色映射：原始 TFC 数据 → (ARGB颜色, 标题)。
- * 一次查询同时获得颜色和标题，无需两步查找。
+ * 标题通过 i18n 解析，支持多语言。
  */
 public final class DataColorMaps {
 
@@ -15,85 +18,108 @@ public final class DataColorMaps {
     public static final String OVERLAY_TEMP   = "tfc_temperature";
     public static final String OVERLAY_PRECIP = "tfc_precipitation";
 
-    /** 颜色 + 标题 */
     public record Info(int color, String title) {}
 
     // ========================================================================
-    // 岩石：rockId → (color, name)
+    // i18n 快捷方法
+    // ========================================================================
+
+    private static final String RK = "journeymap.overlay.tfc_rock_layers.rock.";
+    private static final String TK = "journeymap.overlay.tfc_temperature.";
+    private static final String PK = "journeymap.overlay.tfc_precipitation.";
+
+    private static String t(String key, Object... args) {
+        String template = Component.translatable(key).getString();
+        return args.length == 0 ? template : MessageFormat.format(template, args);
+    }
+
+    // ========================================================================
+    // 岩石：rockId → (color, resolved_title)
     // ========================================================================
 
     private static final Map<String, Info> ROCK_MAP = new HashMap<>();
     static {
-        rock("chalk",        0xFFF5F5DC, "Chalk");
-        rock("chert",        0xFF8B8682, "Chert");
-        rock("claystone",    0xFFB89A7A, "Claystone");
-        rock("conglomerate", 0xFFCD853F, "Conglomerate");
-        rock("dolomite",     0xFFFFB6C1, "Dolomite");
-        rock("limestone",    0xFFFFFDD0, "Limestone");
-        rock("shale",        0xFF696969, "Shale");
-        rock("gneiss",       0xFFBEBEBE, "Gneiss");
-        rock("marble",       0xFFF0F0F0, "Marble");
-        rock("phyllite",     0xFF8FBC8F, "Phyllite");
-        rock("quartzite",    0xFFFFE4E1, "Quartzite");
-        rock("schist",       0xFFA9A9A9, "Schist");
-        rock("slate",        0xFF708090, "Slate");
-        rock("diorite",      0xFFD3D3D3, "Diorite");
-        rock("gabbro",       0xFF4A4A4A, "Gabbro");
-        rock("basalt",       0xFF2F2F2F, "Basalt");
-        rock("rhyolite",     0xFFDEB887, "Rhyolite");
-        rock("granite",      0xFFE8D8C0, "Granite");
-        rock("dacite",       0xFFA0937A, "Dacite");
-        rock("andesite",     0xFF8C7C6C, "Andesite");
+        rock("chalk",        0xFFF5F5DC);
+        rock("chert",        0xFF8B8682);
+        rock("claystone",    0xFFB89A7A);
+        rock("conglomerate", 0xFFCD853F);
+        rock("dolomite",     0xFFFFB6C1);
+        rock("limestone",    0xFFFFFDD0);
+        rock("shale",        0xFF696969);
+        rock("gneiss",       0xFFBEBEBE);
+        rock("marble",       0xFFF0F0F0);
+        rock("phyllite",     0xFF8FBC8F);
+        rock("quartzite",    0xFFFFE4E1);
+        rock("schist",       0xFFA9A9A9);
+        rock("slate",        0xFF708090);
+        rock("diorite",      0xFFD3D3D3);
+        rock("gabbro",       0xFF4A4A4A);
+        rock("basalt",       0xFF2F2F2F);
+        rock("rhyolite",     0xFFDEB887);
+        rock("granite",      0xFFE8D8C0);
+        rock("dacite",       0xFFA0937A);
+        rock("andesite",     0xFF8C7C6C);
     }
 
-    private static void rock(String name, int color, String title) {
-        ROCK_MAP.put("tfc:" + name, new Info(color, title));
+    private static void rock(String name, int color) {
+        ROCK_MAP.put("tfc:" + name, new Info(color, RK + name));
     }
 
-    private static final Info ROCK_UNKNOWN = new Info(0xFF808080, "Unknown");
-    private static final Info ROCK_NONE    = new Info(0x40000000, "None");
+    private static final Info ROCK_NONE = new Info(0x40000000, RK + "none");
 
     public static Info forRock(String rockId) {
         if (rockId == null || rockId.isEmpty()) return ROCK_NONE;
-        return ROCK_MAP.getOrDefault(rockId, ROCK_UNKNOWN);
+        var info = ROCK_MAP.get(rockId);
+        if (info == null) return new Info(0xFF808080, t(RK + "unknown"));
+        return new Info(info.color(), t(info.title())); // 解析 i18n key → 显示文本
     }
 
     // ========================================================================
-    // 温度：float → (color, title)，0°C 分界，每 5°C 一档
+    // 温度：float → (color, resolved_title)
     // ========================================================================
 
     public static Info forTemperature(float t) {
-        if (t <= -25) return new Info(0xFF00008B, "≤ -25°C");
-        if (t <= -20) return new Info(0xFF0000CD, "-25 ~ -20°C");
-        if (t <= -15) return new Info(0xFF4169E1, "-20 ~ -15°C");
-        if (t <= -10) return new Info(0xFF6495ED, "-15 ~ -10°C");
-        if (t <= -5)  return new Info(0xFF87CEEB, "-10 ~ -5°C");
-        if (t <= 0)   return new Info(0xFFB0E0E6, "-5 ~ 0°C");
-        if (t <= 5)   return new Info(0xFF90EE90, "0 ~ 5°C");
-        if (t <= 10)  return new Info(0xFF7CFC00, "5 ~ 10°C");
-        if (t <= 15)  return new Info(0xFFFFD700, "10 ~ 15°C");
-        if (t <= 20)  return new Info(0xFFFFA500, "15 ~ 20°C");
-        if (t <= 25)  return new Info(0xFFFF8C00, "20 ~ 25°C");
-        if (t <= 30)  return new Info(0xFFFF6347, "25 ~ 30°C");
-        if (t <= 35)  return new Info(0xFFFF4500, "30 ~ 35°C");
-        if (t <= 40)  return new Info(0xFFDC143C, "35 ~ 40°C");
-        return new Info(0xFF8B0000, "≥ 40°C");
+        if (t <= -25) return ti(0xFF00008B, "below", -25);
+        if (t <= -20) return ti(0xFF0000CD, "range", -25, -20);
+        if (t <= -15) return ti(0xFF4169E1, "range", -20, -15);
+        if (t <= -10) return ti(0xFF6495ED, "range", -15, -10);
+        if (t <= -5)  return ti(0xFF87CEEB, "range", -10, -5);
+        if (t <= 0)   return ti(0xFFB0E0E6, "range", -5, 0);
+        if (t <= 5)   return ti(0xFF90EE90, "range", 0, 5);
+        if (t <= 10)  return ti(0xFF7CFC00, "range", 5, 10);
+        if (t <= 15)  return ti(0xFFFFD700, "range", 10, 15);
+        if (t <= 20)  return ti(0xFFFFA500, "range", 15, 20);
+        if (t <= 25)  return ti(0xFFFF8C00, "range", 20, 25);
+        if (t <= 30)  return ti(0xFFFF6347, "range", 25, 30);
+        if (t <= 35)  return ti(0xFFFF4500, "range", 30, 35);
+        if (t <= 40)  return ti(0xFFDC143C, "range", 35, 40);
+        return ti(0xFF8B0000, "above", 40);
+    }
+
+    private static Info ti(int color, String suffix, Object... args) {
+        String template = Component.translatable(TK + suffix).getString();
+        return new Info(color, MessageFormat.format(template, args));
     }
 
     // ========================================================================
-    // 降水：float → (color, title)，每 50mm 一档
+    // 降水：float → (color, resolved_title)
     // ========================================================================
 
     public static Info forRainfall(float r) {
-        if (r <= 50)   return new Info(0xFF8B4513, "0 ~ 50 mm");
-        if (r <= 100)  return new Info(0xFFDAA520, "50 ~ 100 mm");
-        if (r <= 150)  return new Info(0xFFF0E68C, "100 ~ 150 mm");
-        if (r <= 200)  return new Info(0xFF90EE90, "150 ~ 200 mm");
-        if (r <= 250)  return new Info(0xFF3CB371, "200 ~ 250 mm");
-        if (r <= 300)  return new Info(0xFF20B2AA, "250 ~ 300 mm");
-        if (r <= 350)  return new Info(0xFF4682B4, "300 ~ 350 mm");
-        if (r <= 400)  return new Info(0xFF4169E1, "350 ~ 400 mm");
-        if (r <= 450)  return new Info(0xFF0000CD, "400 ~ 450 mm");
-        return new Info(0xFF00008B, "≥ 500 mm");
+        if (r <= 50)   return pi(0xFF8B4513, "range", 0, 50);
+        if (r <= 100)  return pi(0xFFDAA520, "range", 50, 100);
+        if (r <= 150)  return pi(0xFFF0E68C, "range", 100, 150);
+        if (r <= 200)  return pi(0xFF90EE90, "range", 150, 200);
+        if (r <= 250)  return pi(0xFF3CB371, "range", 200, 250);
+        if (r <= 300)  return pi(0xFF20B2AA, "range", 250, 300);
+        if (r <= 350)  return pi(0xFF4682B4, "range", 300, 350);
+        if (r <= 400)  return pi(0xFF4169E1, "range", 350, 400);
+        if (r <= 450)  return pi(0xFF0000CD, "range", 400, 450);
+        return pi(0xFF00008B, "above", 500);
+    }
+
+    private static Info pi(int color, String suffix, Object... args) {
+        String template = Component.translatable(PK + suffix).getString();
+        return new Info(color, MessageFormat.format(template, args));
     }
 }

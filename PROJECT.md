@@ -15,7 +15,8 @@ Minecraft 1.21.1 NeoForge 模组，在 JourneyMap 全屏地图上叠加显示 Te
 ┌─ 服务端 ────────────────────────────┐  ┌─ 客户端 ───────────────────────────────┐
 │                                      │  │                                         │
 │  ServerCache ─── 存原始 TFC 数据 ───→│  │  DataColorMaps ── 原始数据→(颜色,标题) │
-│  (3×3 base粒度)  (rockId,temp,rain)  │  │                                         │
+│  (3×3 base粒度)  (rockId,temp,rain)  │  │  (i18n 多语言支持)                      │
+│  + 持久化到 world/data/              │  │                                         │
 │        ↑                             │  │  OverlayRenderer ── 合并同色→Polygon    │
 │  ChunkEvent.Load + warmup()          │  │        ↑                                │
 │        ↑                             │  │  CacheDataPayload ←── S→C              │
@@ -27,12 +28,13 @@ Minecraft 1.21.1 NeoForge 模组，在 JourneyMap 全屏地图上叠加显示 Te
 ### 数据流
 
 ```
-Toggle ON (主世界) → sendCacheRequest → Server warmup + buildPayload
+Toggle ON (主世界) → sendCacheRequest → Server loadOnce + warmup + buildPayload
 → Client 收原始数据 → 计算颜色 → 按色分组 → 合并相邻 → PolygonOverlay → show
 
 Toggle OFF → removeOverlay
 离开主世界 → clearAll
 进入主世界 → clearAll + sendCacheRequest
+世界保存 → 缓存持久化到 <world>/data/jmtfc_cache.json
 ```
 
 ## 源文件
@@ -51,26 +53,27 @@ src/main/java/com/yukimods/journeymap/tfcintegration/
 │   │   ├── OverlayDef.java              叠加层定义
 │   │   ├── OverlayRenderer.java         合并 + PolygonOverlay 生命周期
 │   │   └── data/
-│   │       └── DataColorMaps.java       原始数据→(颜色,标题)
+│   │       └── DataColorMaps.java       原始数据→(颜色,标题) + i18n
 │   └── server/
-│       ├── JMTFCServerPlugin.java       JM发现 + handleRequestCache
-│       ├── ServerCache.java             缓存 + ChunkEvent + warmup + buildPayload
+│       ├── JMTFCServerPlugin.java       JM发现 + handleRequestCache + LevelEvent.Save
+│       ├── ServerCache.java             缓存 + ChunkEvent + warmup + 持久化 + buildPayload
 │       └── data/
-│           └── TFCDataAccess.java       TFC API封装
+│           └── TFCDataAccess.java       TFC API封装（含 queryRockId）
 ```
 
 ## 关键设计
 
 - **服务端不碰颜色**：只存 `rockId(string) + temperature(float) + rainfall(float)`
-- **客户端计算颜色**：`DataColorMaps` 一步返回 `(color, title)`，无需两步查找
-- **3×3 block 粒度**：服务端存 base pos（floorDiv/3*3），客户端直接合并，不展开
-- **Warmup 机制**：首次请求时扫描玩家周围已加载区块，补齐出生点缓存
+- **客户端计算颜色**：`DataColorMaps` 一步返回 `(color, title)`，i18n 多语言
+- **3×3 block 粒度**：服务端只缓存 base pos（3 的倍数），采样点为 chunk 中心世界坐标
+- **Warmup 机制**：首次请求时扫描玩家周围已加载区块，补齐缓存
+- **持久化**：`LevelEvent.Save` 时写 JSON 到世界存档，启动时懒加载
 - **仅主世界**：其他维度不缓存、不响应、不渲染
 
 ## 三个叠加层
 
 | 叠加层 | 数据来源 | 颜色方案 |
 |--------|---------|---------|
-| Rock Layers | `RockData.getSurfaceRock(8,8)` → rockId | 20种岩石固定颜色 |
+| Rock Layers | `rockData.getRock(worldX, worldY, worldZ)` | 20种岩石固定颜色 |
 | Temperature | `ClimateModel.getAverageTemperature()` | -25°C~+40°C 蓝→红 5°C档 |
 | Precipitation | `ClimateModel.getAverageRainfall()` | 0~500mm 棕→蓝 50mm档 |

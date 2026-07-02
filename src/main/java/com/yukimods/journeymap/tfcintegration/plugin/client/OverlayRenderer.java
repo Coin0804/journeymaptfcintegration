@@ -125,7 +125,8 @@ public class OverlayRenderer {
             try { api.show(o); } catch (Exception ignored) {}
         }
         activeOverlays.put(overlayId, newOverlays);
-        LOGGER.debug("[Client] Rendered {}: {} polygons", overlayId, newOverlays.size());
+        LOGGER.debug("[Client] Rendered {}: {} colors → {} polygons",
+            overlayId, byColor.size(), newOverlays.size());
     }
 
     // ========================================================================

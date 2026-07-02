@@ -1,7 +1,6 @@
 package com.yukimods.journeymap.tfcintegration.plugin.server.data;
 
 import net.dries007.tfc.world.chunkdata.ChunkData;
-import net.dries007.tfc.world.chunkdata.RockData;
 import net.dries007.tfc.world.settings.RockSettings;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -17,21 +16,23 @@ public final class TFCDataAccess {
 
     // ---- ChunkData 封装 ----
 
-    public static ChunkData getChunkData(LevelChunk chunk) {
+    private static ChunkData getChunkData(LevelChunk chunk) {
         return ChunkData.get((net.minecraft.world.level.chunk.ChunkAccess) chunk);
     }
 
-    public static RockData getRockData(ChunkData data) {
-        return data.getRockData();
-    }
-
-    public static RockSettings getSurfaceRock(RockData rockData) {
-        return rockData.getSurfaceRock(8, 8);
+    public static String queryRockId(LevelChunk chunk, int wx, int wy, int wz) {
+        var tfcData = getChunkData(chunk);
+        if (tfcData == null) return "";
+        var rd = tfcData.getRockData();
+        if (rd == null) return "";
+        var rock = rd.getSurfaceRock(wx, wz);
+        if (rock == null) return "";
+        return TFCDataAccess.getRockId(rock).toString();
     }
 
     /**
      * 从 RockSettings 提取岩石 ID（去掉 "raw/" 前缀）。
-     * rock.raw() → "tfc:raw/granite" → 返回 "tfc:granite"
+     * rock.raw() → "tfc:rock/raw/granite" → 返回 "tfc:granite"
      */
     public static ResourceLocation getRockId(RockSettings rock) {
         ResourceLocation rawId = BuiltInRegistries.BLOCK.getKey(rock.raw());
