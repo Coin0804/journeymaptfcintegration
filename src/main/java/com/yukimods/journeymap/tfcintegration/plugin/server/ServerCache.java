@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.file.*;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -115,25 +114,22 @@ public class ServerCache {
     // 构建网络响应
     // ========================================================================
 
-    public CacheDataPayload buildPayload(ResourceKey<Level> dim) {
+    public CacheDataPayload buildPayload(ResourceKey<Level> dim, int centerCX, int centerCZ, int radiusChunks) {
         var dimCache = cache.get(dim);
         List<CacheDataPayload.ChunkEntry> entries = new ArrayList<>();
 
         if (dimCache != null) {
             for (var e : dimCache.entrySet()) {
                 ChunkPos cp = e.getKey();
+                if (Math.abs(cp.x - centerCX) > radiusChunks || Math.abs(cp.z - centerCZ) > radiusChunks) continue;
                 RawChunkData d = e.getValue();
                 entries.add(new CacheDataPayload.ChunkEntry(
                     cp.x, cp.z, d.rockId(), d.temperature(), d.rainfall()));
             }
         }
 
-        var rockCounts = new LinkedHashMap<String, Integer>();
-        for (var e : entries) {
-            rockCounts.merge(e.rockId(), 1, Integer::sum);
-        }
-        LOGGER.debug("[Server] buildPayload for {}: {} entries, unique rocks: {}",
-            dim.location(), entries.size(), rockCounts);
+        LOGGER.debug("[Server] buildPayload for {} around ({},{}): {} entries",
+            dim.location(), centerCX, centerCZ, entries.size());
 
         return new CacheDataPayload(dim.location(), entries);
     }

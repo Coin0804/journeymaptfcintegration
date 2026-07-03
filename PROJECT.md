@@ -28,8 +28,9 @@ Minecraft 1.21.1 NeoForge 模组，在 JourneyMap 全屏地图上叠加显示 Te
 ### 数据流
 
 ```
-Toggle ON (主世界) → sendCacheRequest → Server loadOnce + warmup + buildPayload
-→ Client 收原始数据 → 计算颜色 → 按色分组 → 合并相邻 → PolygonOverlay → show
+Toggle ON (主世界) → sendCacheRequest(视口base坐标) 
+→ Server loadOnce + warmup + buildPayload(center, radius=600)
+→ Client 收数据 → 计算颜色 → 按色分组 → 合并相邻 → PolygonOverlay → show
 
 Toggle OFF → removeOverlay
 离开主世界 → clearAll

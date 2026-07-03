@@ -20,6 +20,7 @@ public class JMTFCServerPlugin implements IServerPlugin {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JMTFCServerPlugin.class);
     private static final int WARMUP_RADIUS_CHUNKS = 16;
+    private static final int RESPONSE_RADIUS_CHUNKS = 600;
 
     private static JMTFCServerPlugin instance;
     public static JMTFCServerPlugin getInstance() { return instance; }
@@ -53,7 +54,8 @@ public class JMTFCServerPlugin implements IServerPlugin {
             var level = player.serverLevel();
             plugin.serverCache.loadOnce(level);
             plugin.serverCache.warmup(level, player.blockPosition(), WARMUP_RADIUS_CHUNKS);
-            var response = plugin.serverCache.buildPayload(level.dimension());
+            var response = plugin.serverCache.buildPayload(level.dimension(),
+                payload.baseCX(), payload.baseCZ(), RESPONSE_RADIUS_CHUNKS);
             LOGGER.info("[Server] Cache request: {} entries sent to {}",
                 response.chunks().size(), player.getGameProfile().getName());
             PacketDistributor.sendToPlayer(player, response);

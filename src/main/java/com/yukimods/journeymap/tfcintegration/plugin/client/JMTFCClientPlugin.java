@@ -132,10 +132,14 @@ public class JMTFCClientPlugin implements IClientPlugin {
     // ========================================================================
 
     private void sendCacheRequest() {
-        ResourceKey<Level> dim = getClientDimension();
-        if (dim != null && Level.OVERWORLD.equals(dim)) {
-            PacketDistributor.sendToServer(new RequestCachePayload(dim.location()));
-        }
+        var mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        ResourceKey<Level> dim = mc.player.level().dimension();
+        if (!Level.OVERWORLD.equals(dim)) return;
+
+        int baseCX = Math.floorDiv(mc.player.blockPosition().getX() >> 4, 3) * 3;
+        int baseCZ = Math.floorDiv(mc.player.blockPosition().getZ() >> 4, 3) * 3;
+        PacketDistributor.sendToServer(new RequestCachePayload(dim.location(), baseCX, baseCZ));
     }
 
     public static void handleCacheData(CacheDataPayload payload, IPayloadContext ctx) {
