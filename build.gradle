@@ -18,6 +18,10 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+base {
+    archivesName = "${mod_id}-neoforge-${mod_version}"
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
