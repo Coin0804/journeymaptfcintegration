@@ -11,6 +11,7 @@ build/
 .project
 .classpath
 .settings/
+.eclipse/
 
 # Claude
 .claude/
