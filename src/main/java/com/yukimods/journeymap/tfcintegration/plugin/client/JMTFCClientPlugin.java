@@ -20,9 +20,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 
 /**
  * JourneyMap 客户端插件 — 仅主世界生效。
@@ -44,8 +43,8 @@ public class JMTFCClientPlugin implements IClientPlugin {
     public static JMTFCClientPlugin getInstance() { return instance; }
 
     private OverlayRenderer overlayRenderer;
-    /** 自己追踪 toggle 状态——JM 按钮的 getToggled() 在回调中返回的是点击前的旧值 */
-    private final Set<String> toggledOverlays = new HashSet<>();
+    /** 当前激活的叠加层 ID（null = 无），互斥单选 */
+    private String activeOverlayId;
 
     @Override
     public String getModId() {
@@ -77,31 +76,45 @@ public class JMTFCClientPlugin implements IClientPlugin {
             String displayName = Component.translatable(overlay.name).getString();
 
             overlay.button = display.addThemeToggleButton(displayName, icon, false, button -> {
-                boolean wasOn = toggledOverlays.contains(overlay.id);
-                if (wasOn) {
-                    // 关闭自己
-                    button.setToggled(false);
-                    toggledOverlays.remove(overlay.id);
-                    overlayRenderer.toggleOverlay(overlay.id, false);
-                    LOGGER.info("[Client] Toggle OFF: {}", overlay.id);
-                } else {
-                    // 关闭其他 overlay
-                    for (OverlayDef other : OVERLAYS) {
-                        if (!other.id.equals(overlay.id)
-                            && toggledOverlays.contains(other.id)) {
-                            if (other.button != null) other.button.setToggled(false);
-                            toggledOverlays.remove(other.id);
-                            overlayRenderer.removeOverlay(other.id);
-                        }
-                    }
-                    button.setToggled(true);
-                    toggledOverlays.add(overlay.id);
-                    overlayRenderer.toggleOverlay(overlay.id, true);
-                    LOGGER.info("[Client] Toggle ON: {}", overlay.id);
-                    if (isOverworld()) sendCacheRequest();
-                }
+                // 回调只负责表达意图：切换目标 overlay
+                String target = overlay.id.equals(activeOverlayId) ? null : overlay.id;
+                setActiveOverlay(target);
             });
             overlay.button.setTooltip(Component.translatable(overlay.desc).getString());
+        }
+    }
+
+    /**
+     * 激活/取消叠加层。幂等操作——相同 target 不会重复执行。
+     * syncButtons 中 setToggled 即使触发回调也不会造成重入。
+     */
+    private void setActiveOverlay(String overlayId) {
+        if (Objects.equals(activeOverlayId, overlayId)) return; // 幂等
+
+        // 关闭旧层
+        if (activeOverlayId != null) {
+            overlayRenderer.toggleOverlay(activeOverlayId, false);
+            LOGGER.info("[Client] Toggle OFF: {}", activeOverlayId);
+        }
+
+        // 开启新层
+        activeOverlayId = overlayId;
+        if (overlayId != null) {
+            overlayRenderer.toggleOverlay(overlayId, true);
+            LOGGER.info("[Client] Toggle ON: {}", overlayId);
+            if (isOverworld()) sendCacheRequest();
+        }
+
+        // UI 按钮同步——setToggled 可能触发回调，但 setActiveOverlay 幂等，回调变 no-op
+        syncButtons();
+    }
+
+    /** 同步所有按钮的 toggle 视觉状态到当前 activeOverlayId */
+    private void syncButtons() {
+        for (OverlayDef o : OVERLAYS) {
+            if (o.button != null) {
+                o.button.setToggled(o.id.equals(activeOverlayId));
+            }
         }
     }
 

@@ -105,6 +105,7 @@ public final class DataColorMaps {
     // 降水：float → (color, resolved_title)
     // ========================================================================
 
+    // Note: TFC rainfall values range up to 500mm+; the "above" threshold is 450
     public static Info forRainfall(float r) {
         if (r <= 50)   return pi(0xFF8B4513, "range", 0, 50);
         if (r <= 100)  return pi(0xFFDAA520, "range", 50, 100);
@@ -115,7 +116,7 @@ public final class DataColorMaps {
         if (r <= 350)  return pi(0xFF4682B4, "range", 300, 350);
         if (r <= 400)  return pi(0xFF4169E1, "range", 350, 400);
         if (r <= 450)  return pi(0xFF0000CD, "range", 400, 450);
-        return pi(0xFF00008B, "above", 500);
+        return pi(0xFF00008B, "above", 450);
     }
 
     private static Info pi(int color, String suffix, Object... args) {

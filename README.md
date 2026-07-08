@@ -25,7 +25,7 @@ Adds TerraFirmaCraft rock layer, temperature, and precipitation overlays to the 
 
 ## 安装 / Installation
 
-将 `journeymaptfcintegration-neoforge-1.0.0.jar` 放入 `mods/` 目录。
+将 `journeymaptfcintegration-neoforge-1.0.1.jar` 放入 `mods/` 目录。
 
 ## 使用 / Usage
 
@@ -46,7 +46,7 @@ Adds TerraFirmaCraft rock layer, temperature, and precipitation overlays to the 
 
 ```bash
 ./gradlew jar
-# output: build/libs/journeymaptfcintegration-neoforge-1.0.0.jar
+# output: build/libs/journeymaptfcintegration-neoforge-1.0.1.jar
 ```
 
 - Java 21
