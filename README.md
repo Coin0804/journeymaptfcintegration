@@ -19,18 +19,20 @@ Adds TerraFirmaCraft rock layer, temperature, and precipitation overlays to the 
 - Overworld only
 - Three overlays toggle between each other
 - Supports English / Chinese
+- `/jmtfc clearcache` command to clear all cached data
 
 ### Usage
 
 1. Open JourneyMap fullscreen map (default `J`)
 2. Click the TFC button on the left (Rock / Temperature / Precipitation)
 3. The selected overlay appears on the map
+4. Use `/jmtfc clearcache` (OP level 2) to reset all TFC cache data
 
 ### Technical Notes
 
 - **Data granularity**: Overlay data is sampled at 3×3 chunk (48×48 block) resolution. The same data is shown for the entire 3×3 area, which may cause inaccuracies at rock/biome boundaries.
 - **Viewport-based loading**: toggling ON sends the current map viewport center to the server, which returns cached data within a 600-chunk radius to avoid excessive payload.
-- **Cache persistence**: explored area data is saved to `<world>/data/jmtfc_cache.json` on world save and automatically restored after restart.
+- **Cache persistence**: explored area data is saved to `<world>/data/jmtfc_cache.json` on world save and automatically restored after restart. Cache is loaded at server startup (not on first client request) to prevent race conditions with other mods triggering saves.
 
 ### Dependencies
 
@@ -68,18 +70,20 @@ MIT © 2026 Coin0804
 - 仅主世界生效
 - 三个叠加层互斥切换
 - 支持中英文切换
+- `/jmtfc clearcache` 命令清除全部缓存数据
 
 ### 使用
 
 1. 打开 JourneyMap 全屏地图（默认 `J`）
 2. 点击左侧 TFC 按钮（岩层 / 温度 / 降水）
 3. 地图上显示对应的覆盖层
+4. 使用 `/jmtfc clearcache`（OP 权限 level 2）重置全部 TFC 缓存
 
 ### 技术说明
 
 - **数据粒度**：覆盖层以 3×3 chunk（48×48 方块）为最小采样单位。同一 3×3 区块内所有位置显示相同数据，区块边界处可能与实际地形有偏差。
 - **视口请求**：Toggle ON 时客户端向服务端发送当前地图视口中心，服务端返回半径 600 chunk 范围内的缓存数据，避免载荷过大。
-- **缓存持久化**：探索过的区域数据在存档时存入 `<world>/data/jmtfc_cache.json`，重启后自动恢复。
+- **缓存持久化**：探索过的区域数据在存档时存入 `<world>/data/jmtfc_cache.json`，重启后自动恢复。缓存在服务端启动时即加载（不再依赖客户端首次请求），避免与其他模组的 save 事件产生竞争。
 
 ### 依赖
 

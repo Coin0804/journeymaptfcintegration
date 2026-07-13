@@ -54,7 +54,11 @@ public class OverlayRenderer {
     // ========================================================================
 
     public void onCacheDataReceived(CacheDataPayload payload) {
-        currentDimension = ResourceKey.create(Registries.DIMENSION, payload.dimension());
+        ResourceKey<Level> newDim = ResourceKey.create(Registries.DIMENSION, payload.dimension());
+        LOGGER.debug("[Client] onCacheDataReceived(): dim={}, entries={}, activeOverlays={}",
+            newDim.location(), payload.chunks().size(), activeOverlays.keySet());
+
+        currentDimension = newDim;
         overlayCache.clear();
 
         for (var e : payload.chunks()) {
@@ -64,10 +68,16 @@ public class OverlayRenderer {
             putCache(DataColorMaps.OVERLAY_PRECIP, cp, DataColorMaps.forRainfall(e.rainfall()));
         }
 
-        LOGGER.debug("[Client] Cache processed: {} base entries, dim={}",
-            payload.chunks().size(), currentDimension);
+        Map<ChunkPos, DataColorMaps.Info> rockCache = overlayCache.get(DataColorMaps.OVERLAY_ROCK);
+        Map<ChunkPos, DataColorMaps.Info> tempCache = overlayCache.get(DataColorMaps.OVERLAY_TEMP);
+        Map<ChunkPos, DataColorMaps.Info> precipCache = overlayCache.get(DataColorMaps.OVERLAY_PRECIP);
+        LOGGER.debug("[Client] onCacheDataReceived() processed: rock={}, temp={}, precip={}",
+            rockCache != null ? rockCache.size() : 0,
+            tempCache != null ? tempCache.size() : 0,
+            precipCache != null ? precipCache.size() : 0);
 
         for (String id : activeOverlays.keySet()) {
+            LOGGER.debug("[Client] Triggering render for active overlay: {}", id);
             renderOverlay(id);
         }
     }
@@ -81,10 +91,14 @@ public class OverlayRenderer {
     // ========================================================================
 
     public void toggleOverlay(String overlayId, boolean enabled) {
+        LOGGER.debug("[Client] toggleOverlay(): id={}, enabled={}, hasCache={}",
+            overlayId, enabled, overlayCache.containsKey(overlayId));
         if (enabled) {
             activeOverlays.put(overlayId, new ArrayList<>());
             if (overlayCache.containsKey(overlayId)) {
                 renderOverlay(overlayId);
+            } else {
+                LOGGER.debug("[Client] toggleOverlay(): no cache yet for {}, waiting for network response", overlayId);
             }
         } else {
             removeOverlay(overlayId);
@@ -99,7 +113,12 @@ public class OverlayRenderer {
         removeOverlay(overlayId);
 
         Map<ChunkPos, DataColorMaps.Info> chunks = overlayCache.get(overlayId);
-        if (chunks == null || chunks.isEmpty()) return;
+        if (chunks == null || chunks.isEmpty()) {
+            LOGGER.debug("[Client] renderOverlay({}) skipped: no chunks in cache", overlayId);
+            return;
+        }
+
+        LOGGER.debug("[Client] renderOverlay({}) starting: {} chunks", overlayId, chunks.size());
 
         // 按颜色分组
         Map<Integer, Set<ChunkPos>> byColor = new LinkedHashMap<>();

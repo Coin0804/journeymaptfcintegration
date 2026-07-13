@@ -12,6 +12,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,7 @@ public class JMTFCServerPlugin implements IServerPlugin {
     public static JMTFCServerPlugin getInstance() { return instance; }
 
     private ServerCache serverCache;
+    public ServerCache getServerCache() { return serverCache; }
 
     @Override
     public String getModId() {
@@ -38,6 +40,15 @@ public class JMTFCServerPlugin implements IServerPlugin {
         this.serverCache = new ServerCache();
         NeoForge.EVENT_BUS.register(serverCache); // ChunkEvent.Load
         NeoForge.EVENT_BUS.register(this);        // LevelEvent.Save
+
+        // 服务端初始化完成，立即加载磁盘缓存——不依赖客户端请求。
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            serverCache.loadOnce(server.overworld());
+        } else {
+            LOGGER.warn("[Server] Init: cannot get current server, deferring cache load");
+        }
+
         LOGGER.info("[Server] Init done.");
     }
 
@@ -48,16 +59,29 @@ public class JMTFCServerPlugin implements IServerPlugin {
     public static void handleRequestCache(RequestCachePayload payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             var plugin = getInstance();
-            if (plugin == null || plugin.serverCache == null) return;
-            if (!(ctx.player() instanceof ServerPlayer player)) return;
+            if (plugin == null) {
+                LOGGER.warn("[Server] handleRequestCache() skipped: plugin instance is null (not initialized yet?)");
+                return;
+            }
+            if (plugin.serverCache == null) {
+                LOGGER.warn("[Server] handleRequestCache() skipped: serverCache is null");
+                return;
+            }
+            if (!(ctx.player() instanceof ServerPlayer player)) {
+                LOGGER.warn("[Server] handleRequestCache() skipped: ctx.player() is not ServerPlayer");
+                return;
+            }
 
             var level = player.serverLevel();
-            plugin.serverCache.loadOnce(level);
+            LOGGER.debug("[Server] handleRequestCache(): player={}, dim={}, base=({},{})",
+                player.getGameProfile().getName(), level.dimension().location(),
+                payload.baseCX(), payload.baseCZ());
+
             plugin.serverCache.warmup(level, player.blockPosition(), WARMUP_RADIUS_CHUNKS);
             var response = plugin.serverCache.buildPayload(level.dimension(),
                 payload.baseCX(), payload.baseCZ(), RESPONSE_RADIUS_CHUNKS);
-            LOGGER.info("[Server] Cache request: {} entries sent to {}",
-                response.chunks().size(), player.getGameProfile().getName());
+            LOGGER.debug("[Server] handleRequestCache() response: {} entries",
+                response.chunks().size());
             PacketDistributor.sendToPlayer(player, response);
         });
     }

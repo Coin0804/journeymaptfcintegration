@@ -58,8 +58,10 @@ public class ServerCache {
         if (dimCache.containsKey(base)) return;
 
         dimCache.put(base, queryData(chunk, level));
-        LOGGER.debug("[Server] Cached base({},{}): rock={}",
-            base.x, base.z, dimCache.get(base).rockId());
+        LOGGER.debug("[Server] ChunkLoad cached base({},{}): rock={}, temp={}, rain={}, cacheSize={}",
+            base.x, base.z, dimCache.get(base).rockId(),
+            dimCache.get(base).temperature(), dimCache.get(base).rainfall(),
+            dimCache.size());
     }
 
     // ========================================================================
@@ -67,7 +69,11 @@ public class ServerCache {
     // ========================================================================
 
     public void warmup(ServerLevel level, BlockPos center, int radiusChunks) {
-        if (!level.dimension().equals(Level.OVERWORLD)) return;
+        if (!level.dimension().equals(Level.OVERWORLD)) {
+            LOGGER.warn("[Server] warmup() skipped: dim is not OVERWORLD ({})",
+                level.dimension().location());
+            return;
+        }
 
         var dimCache = cache.computeIfAbsent(level.dimension(), k -> new ConcurrentHashMap<>());
         ChunkPos cp = new ChunkPos(center);
@@ -92,7 +98,7 @@ public class ServerCache {
             }
         }
 
-        LOGGER.debug("[Server] Warmup done: +{} base entries (total: {})",
+        LOGGER.debug("[Server] warmup() done: +{} entries (total: {})",
             dimCache.size() - cachedBefore, dimCache.size());
     }
 
@@ -118,6 +124,8 @@ public class ServerCache {
         var dimCache = cache.get(dim);
         List<CacheDataPayload.ChunkEntry> entries = new ArrayList<>();
 
+        int totalInCache = dimCache != null ? dimCache.size() : 0;
+
         if (dimCache != null) {
             for (var e : dimCache.entrySet()) {
                 ChunkPos cp = e.getKey();
@@ -128,8 +136,8 @@ public class ServerCache {
             }
         }
 
-        LOGGER.debug("[Server] buildPayload for {} around ({},{}): {} entries",
-            dim.location(), centerCX, centerCZ, entries.size());
+        LOGGER.debug("[Server] buildPayload(): dim={}, center=({},{}), totalInCache={}, filtered={}",
+            dim.location(), centerCX, centerCZ, totalInCache, entries.size());
 
         return new CacheDataPayload(dim.location(), entries);
     }
@@ -140,30 +148,60 @@ public class ServerCache {
 
     public void loadOnce(ServerLevel level) {
         if (loadedFromDisk) return;
-        loadedFromDisk = true;
         if (!level.dimension().equals(Level.OVERWORLD)) return;
 
+        // 到达这里 = 主世界 + 首次调用。无论文件存不存在、加载成不成功，
+        // 方法结束时 loadedFromDisk 都会置 true，让 save() 知道可以安全持久化。
         Path path = getSavePath(level);
-        if (!Files.exists(path)) return;
+        LOGGER.debug("[Server] loadOnce() path: {}", path.toAbsolutePath());
 
-        try (Reader reader = Files.newBufferedReader(path)) {
-            DiskFile data = GSON.fromJson(reader, DiskFile.class);
-            var dimCache = cache.computeIfAbsent(Level.OVERWORLD, k -> new ConcurrentHashMap<>());
-            for (DiskEntry e : data.entries) {
-                dimCache.put(new ChunkPos(e.cx, e.cz),
-                    new RawChunkData(e.rock, e.temp, e.rain));
+        if (Files.exists(path)) {
+            try (Reader reader = Files.newBufferedReader(path)) {
+                DiskFile data = GSON.fromJson(reader, DiskFile.class);
+                if (data == null || data.entries == null) {
+                    LOGGER.warn("[Server] loadOnce() failed: parsed data is null");
+                } else {
+                    var dimCache = cache.computeIfAbsent(Level.OVERWORLD, k -> new ConcurrentHashMap<>());
+                    int memoryBefore = dimCache.size();
+                    int fromDisk = 0, overwritten = 0;
+
+                    for (DiskEntry e : data.entries) {
+                        ChunkPos cp = new ChunkPos(e.cx, e.cz);
+                        boolean existed = dimCache.containsKey(cp);
+                        dimCache.put(cp, new RawChunkData(e.rock, e.temp, e.rain));
+                        fromDisk++;
+                        if (existed) overwritten++;
+                    }
+
+                    LOGGER.info("[Server] loadOnce() OK: disk={}, memoryBefore={}, overwritten={}, new={}, total={}",
+                        fromDisk, memoryBefore, overwritten, fromDisk - overwritten, dimCache.size());
+                }
+            } catch (Exception e) {
+                LOGGER.warn("[Server] loadOnce() failed to load cache: {}", e.toString(), e);
             }
-            LOGGER.info("[Server] Loaded {} cached entries from disk", data.entries.size());
-        } catch (Exception e) {
-            LOGGER.warn("[Server] Failed to load cache: {}", e.toString());
+        } else {
+            LOGGER.info("[Server] loadOnce() no cache file (new world?), starting fresh");
         }
+
+        loadedFromDisk = true;
     }
 
     public void save(ServerLevel level) {
-        if (!level.dimension().equals(Level.OVERWORLD)) return;
+        if (!loadedFromDisk) {
+            LOGGER.debug("[Server] save() skipped: loadOnce() not yet called, holding to protect disk cache");
+            return;
+        }
+        if (!level.dimension().equals(Level.OVERWORLD)) {
+            LOGGER.debug("[Server] save() skipped: dim is not OVERWORLD ({})",
+                level.dimension().location());
+            return;
+        }
 
         var dimCache = cache.get(Level.OVERWORLD);
-        if (dimCache == null || dimCache.isEmpty()) return;
+        if (dimCache == null || dimCache.isEmpty()) {
+            LOGGER.debug("[Server] save() skipped: cache is empty");
+            return;
+        }
 
         List<DiskEntry> entries = new ArrayList<>();
         for (var e : dimCache.entrySet()) {
@@ -177,9 +215,9 @@ public class ServerCache {
             try (Writer writer = Files.newBufferedWriter(path)) {
                 GSON.toJson(new DiskFile(entries), writer);
             }
-            LOGGER.info("[Server] Saved {} entries to disk", entries.size());
+            LOGGER.info("[Server] save() OK: {} entries saved to {}", entries.size(), path.toAbsolutePath());
         } catch (Exception e) {
-            LOGGER.warn("[Server] Failed to save cache: {}", e.toString());
+            LOGGER.warn("[Server] save() failed: {} — {}", path.toAbsolutePath(), e.toString(), e);
         }
     }
 
@@ -191,6 +229,26 @@ public class ServerCache {
     private static class DiskFile { List<DiskEntry> entries; DiskFile(List<DiskEntry> e) { this.entries = e; } }
     private static class DiskEntry { int cx, cz; String rock; float temp, rain;
         DiskEntry(int cx, int cz, String r, float t, float p) { this.cx=cx; this.cz=cz; this.rock=r; this.temp=t; this.rain=p; } }
+
+    // ========================================================================
+    // 缓存清理（由 /jmtfc clearcache 命令调用）
+    // ========================================================================
+
+    public void clearAll(ServerLevel level) {
+        var dimCache = cache.remove(Level.OVERWORLD);
+        int memoryCleared = dimCache != null ? dimCache.size() : 0;
+        // 不重置 loadedFromDisk —— 清除是主动行为，后续新数据应正常持久化。
+
+        Path path = getSavePath(level);
+        try {
+            Files.deleteIfExists(path);
+            LOGGER.info("[Server] clearAll(): removed {} memory entries, deleted {}",
+                memoryCleared, path.toAbsolutePath());
+        } catch (IOException e) {
+            LOGGER.warn("[Server] clearAll(): cleared {} memory entries, but failed to delete {}: {}",
+                memoryCleared, path.toAbsolutePath(), e.toString());
+        }
+    }
 
     // ========================================================================
     // 工具

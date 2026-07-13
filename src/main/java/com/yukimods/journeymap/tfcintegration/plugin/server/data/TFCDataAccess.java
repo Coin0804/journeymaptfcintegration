@@ -4,6 +4,7 @@ import net.dries007.tfc.world.chunkdata.ChunkData;
 import net.dries007.tfc.world.settings.RockSettings;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
@@ -17,7 +18,7 @@ public final class TFCDataAccess {
     // ---- ChunkData 封装 ----
 
     private static ChunkData getChunkData(LevelChunk chunk) {
-        return ChunkData.get((net.minecraft.world.level.chunk.ChunkAccess) chunk);
+        return ChunkData.get((ChunkAccess) chunk);
     }
 
     public static String queryRockId(LevelChunk chunk, int wx, int wy, int wz) {

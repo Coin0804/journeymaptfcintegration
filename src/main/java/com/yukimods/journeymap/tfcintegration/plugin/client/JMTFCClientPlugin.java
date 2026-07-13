@@ -60,7 +60,8 @@ public class JMTFCClientPlugin implements IClientPlugin {
         ClientEventRegistry.DISPLAY_UPDATE_EVENT.subscribe(getModId(), this::onDisplayUpdate);
 
         api.removeAll(getModId());
-        LOGGER.info("[Client] Init done.");
+        LOGGER.info("[Client] Init done. activeOverlayId={}, overlayRenderer={}",
+            activeOverlayId, overlayRenderer != null);
     }
 
     // ========================================================================
@@ -146,23 +147,37 @@ public class JMTFCClientPlugin implements IClientPlugin {
 
     private void sendCacheRequest() {
         var mc = Minecraft.getInstance();
-        if (mc.player == null) return;
+        if (mc.player == null) {
+            LOGGER.warn("[Client] sendCacheRequest() skipped: mc.player is null");
+            return;
+        }
         ResourceKey<Level> dim = mc.player.level().dimension();
-        if (!Level.OVERWORLD.equals(dim)) return;
+        if (!Level.OVERWORLD.equals(dim)) {
+            LOGGER.warn("[Client] sendCacheRequest() skipped: not overworld (dim={})", dim.location());
+            return;
+        }
 
         int baseCX = Math.floorDiv(mc.player.blockPosition().getX() >> 4, 3) * 3;
         int baseCZ = Math.floorDiv(mc.player.blockPosition().getZ() >> 4, 3) * 3;
+        LOGGER.debug("[Client] sendCacheRequest(): dim={}, base=({},{})",
+            dim.location(), baseCX, baseCZ);
         PacketDistributor.sendToServer(new RequestCachePayload(dim.location(), baseCX, baseCZ));
     }
 
     public static void handleCacheData(CacheDataPayload payload, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             var plugin = getInstance();
-            if (plugin != null && plugin.overlayRenderer != null) {
-                LOGGER.debug("[Client] Cache data received: dim={}, {} entries",
-                    payload.dimension(), payload.chunks().size());
-                plugin.overlayRenderer.onCacheDataReceived(payload);
+            if (plugin == null) {
+                LOGGER.warn("[Client] handleCacheData() skipped: plugin instance is null (not initialized yet?)");
+                return;
             }
+            if (plugin.overlayRenderer == null) {
+                LOGGER.warn("[Client] handleCacheData() skipped: overlayRenderer is null");
+                return;
+            }
+            LOGGER.debug("[Client] handleCacheData() received: dim={}, {} entries",
+                payload.dimension(), payload.chunks().size());
+            plugin.overlayRenderer.onCacheDataReceived(payload);
         });
     }
 
