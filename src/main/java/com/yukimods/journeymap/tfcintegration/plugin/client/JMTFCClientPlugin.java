@@ -51,6 +51,7 @@ public class JMTFCClientPlugin implements IClientPlugin {
         return JourneymapTFCIntegration.MODID;
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void initialize(IClientAPI api) {
         instance = this;
