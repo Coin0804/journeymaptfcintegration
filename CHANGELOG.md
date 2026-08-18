@@ -6,6 +6,15 @@
 
 ## English
 
+### [1.0.3] — 2026-08-18
+
+#### Fixed
+
+- **Crash in non-TFC worlds (Critical)**: entering a superflat (or any non-TFC-generator) world crashed the server with `NullPointerException` in `RockData.getSurfaceRock` during chunk generation. TFC's `CHUNK_DATA` attachment degrades to an empty `ChunkData` (null generator) when the level's chunk generator is not TFC's, and `getSurfaceRock` dereferences it unconditionally.
+  - `TFCDataAccess.isTFCGenerator()` — checks `level.getChunkSource().getGenerator() instanceof TFCChunkGenerator`.
+  - `ServerCache.queryData()` — skips the rock query for non-TFC worlds (records `rockId=""`, temperature/rainfall unchanged); result memoized per generator instance (auto-invalidates on world switch) with a one-time INFO log.
+  - Covers both `ChunkEvent.Load` and `warmup()` paths (both go through `queryData`).
+
 ### [1.0.2] — 2026-07-13
 
 #### Fixed
@@ -54,6 +63,15 @@
 ---
 
 ## 中文
+
+### [1.0.3] — 2026-08-18
+
+#### Fixed
+
+- **非 TFC 世界崩溃（Critical）**：进入超平坦（或任何非 TFC 生成器）世界时，区块生成过程中 `RockData.getSurfaceRock` 抛 `NullPointerException` 直接崩服。原因：世界生成器不是 TFC 时，TFC 的 `CHUNK_DATA` attachment 退化为无 generator 的空数据，`getSurfaceRock` 无条件解引用 null。
+  - 新增 `TFCDataAccess.isTFCGenerator()` —— 判定 `level.getChunkSource().getGenerator() instanceof TFCChunkGenerator`。
+  - `ServerCache.queryData()` —— 非 TFC 世界跳过岩石查询（`rockId=""`，温度/降雨逻辑不变）；判定按生成器实例缓存（世界切换自动重判），每个世界打一次 INFO 日志。
+  - `ChunkEvent.Load` 与 `warmup()` 两条路径都经 `queryData`，一处守卫全覆盖。
 
 ### [1.0.2] — 2026-07-13
 

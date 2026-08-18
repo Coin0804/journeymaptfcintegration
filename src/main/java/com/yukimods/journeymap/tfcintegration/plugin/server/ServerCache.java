@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.LevelResource;
@@ -39,6 +40,11 @@ public class ServerCache {
 
     private final Map<ResourceKey<Level>, Map<ChunkPos, RawChunkData>> cache = new ConcurrentHashMap<>();
     private boolean loadedFromDisk;
+
+    // 非 TFC 世界判定缓存 —— 以生成器实例为键：世界切换（新生成器实例）自动失效重判。
+    // 超平坦/虚空等非 TFC 生成器世界没有岩层数据，岩石查询会 NPE（见 queryData）。
+    private ChunkGenerator checkedGenerator;
+    private boolean isTfcWorld = true;
 
     // ========================================================================
     // ChunkEvent.Load — 仅 base 位置
@@ -102,13 +108,33 @@ public class ServerCache {
             dimCache.size() - cachedBefore, dimCache.size());
     }
 
-    private static RawChunkData queryData(LevelChunk chunk, ServerLevel level) {
+    /**
+     * 世界是否由 TFC 生成器生成（有无 TFC 岩层数据）。
+     * 判定按生成器实例缓存，每个世界只判定一次；结果供 queryData 决定是否查询岩石。
+     */
+    private boolean isTFCWorld(ServerLevel level) {
+        ChunkGenerator generator = level.getChunkSource().getGenerator();
+        if (generator != checkedGenerator) {
+            checkedGenerator = generator;
+            isTfcWorld = TFCDataAccess.isTFCGenerator(level);
+            LOGGER.info("[Server] Chunk generator: {} — TFC rock data {}",
+                generator.getClass().getSimpleName(),
+                isTfcWorld ? "enabled" : "absent (non-TFC world, rock query skipped)");
+        }
+        return isTfcWorld;
+    }
+
+    private RawChunkData queryData(LevelChunk chunk, ServerLevel level) {
         int cx = chunk.getPos().x, cz = chunk.getPos().z;
         int wx = (cx << 4) + 8, wz = (cz << 4) + 8;
         int wy = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, 8, 8);
         BlockPos wsp = new BlockPos(wx, wy, wz);
 
-        String rockId = TFCDataAccess.queryRockId(chunk, wx, wy, wz);
+        // 非 TFC 生成器世界（超平坦/虚空等）没有岩层数据，跳过岩石查询；
+        // 否则 RockData.getSurfaceRock() 会因内部 generator 为 null 抛 NPE。
+        String rockId = isTFCWorld(level)
+            ? TFCDataAccess.queryRockId(chunk, wx, wy, wz)
+            : "";
         var climate = Climate.get(level);
         float temperature = climate != null ? climate.getAverageTemperature(level, wsp) : 0f;
         float rainfall = climate != null ? climate.getAverageRainfall(level, wsp) : 0f;

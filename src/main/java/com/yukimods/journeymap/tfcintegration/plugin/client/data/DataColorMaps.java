@@ -68,7 +68,7 @@ public final class DataColorMaps {
     private static final Info ROCK_NONE = new Info(0x40000000, RK + "none");
 
     public static Info forRock(String rockId) {
-        if (rockId == null || rockId.isEmpty()) return ROCK_NONE;
+        if (rockId == null || rockId.isEmpty()) return new Info(ROCK_NONE.color(), t(RK + "none"));
         var info = ROCK_MAP.get(rockId);
         if (info == null) return new Info(0xFF808080, t(RK + "unknown"));
         return new Info(info.color(), t(info.title())); // 解析 i18n key → 显示文本

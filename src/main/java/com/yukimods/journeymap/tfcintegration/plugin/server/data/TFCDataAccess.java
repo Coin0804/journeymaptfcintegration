@@ -1,9 +1,11 @@
 package com.yukimods.journeymap.tfcintegration.plugin.server.data;
 
+import net.dries007.tfc.world.TFCChunkGenerator;
 import net.dries007.tfc.world.chunkdata.ChunkData;
 import net.dries007.tfc.world.settings.RockSettings;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 
@@ -14,6 +16,17 @@ import net.minecraft.world.level.chunk.LevelChunk;
 public final class TFCDataAccess {
 
     private TFCDataAccess() {}
+
+    // ---- 世界能力判定 ----
+
+    /**
+     * 世界是否由 TFC 生成器（TFCChunkGenerator）生成，决定是否存在 TFC 岩层数据。
+     * 超平坦/虚空等世界使用原版生成器：TFC 的 CHUNK_DATA attachment 会退化为无
+     * generator 的空数据，此时 getSurfaceRock() 内部直接解引用 null 抛 NPE。
+     */
+    public static boolean isTFCGenerator(ServerLevel level) {
+        return level.getChunkSource().getGenerator() instanceof TFCChunkGenerator;
+    }
 
     // ---- ChunkData 封装 ----
 
